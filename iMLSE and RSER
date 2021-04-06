@@ -1,0 +1,104 @@
+'   power margin: bottom value of iMLSE and RSER at OPC (by quadratic function) / fixed regression output range
+'   open *.CSV data
+
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+
+    OpenFileName = Application.GetOpenFilename("Power Margin csv, *.csv")
+    If OpenFileName = False Then End
+
+    Workbooks.Open Filename:=OpenFileName
+    Book_Name = ActiveWorkbook.Name
+
+    ThisWorkbook.Sheets("Main").Range("N2").Value = Book_Name
+
+'   search string "Electric" & "Point1" in .CSV data
+    Cells.Find(What:="Electric", After:=ActiveCell, LookIn:=xlFormulas, LookAt _
+        :=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, MatchCase:= _
+        False, MatchByte:=False, SearchFormat:=False).Activate
+
+    Cells.Find(What:="Point1", After:=ActiveCell, LookIn:=xlFormulas, LookAt _
+        :=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, MatchCase:= _
+        False, MatchByte:=False, SearchFormat:=False).Activate
+
+    Point1Row = ActiveCell.Row
+    Point1Column = ActiveCell.Column
+
+'   retrieve data from .CSV file
+    For i = 0 To 8
+        ThisWorkbook.Sheets("Main").Cells(20 + i, 4).Value = Cells(Point1Row + 2, Point1Column + i).Value
+        ThisWorkbook.Sheets("Main").Cells(20 + i, 5).Value = Cells(Point1Row + 5, Point1Column + i).Value
+        ThisWorkbook.Sheets("Main").Cells(20 + i, 6).Value = Cells(Point1Row + 6, Point1Column + i).Value
+        ThisWorkbook.Sheets("Main").Cells(20 + i, 7).Value = Cells(Point1Row + 7, Point1Column + i).Value
+        ThisWorkbook.Sheets("Main").Cells(20 + i, 8).Value = Cells(Point1Row + 10, Point1Column + i).Value
+    Next i
+
+    Workbooks(Book_Name).Close SaveChanges:=False
+
+'   ---------------------------------------------------------------------------------------------------------------
+'   detect iMLSE regression range
+
+    iMLSE_Bottom = WorksheetFunction.Min(Range("G20:G28"))  'reserved for checking
+
+'   calculate range: iMLSE < 20 & log10(RSER) < -0.5
+    For i = 0 To 8
+        If StartFlag = 0 And Cells(20 + i, 9) < -0.5 And Cells(20 + i, 7) > 0 And Cells(20 + i, 7) < 21 Then
+            RegressionStartRow = 20 + i
+            StartFlag = 1
+        End If
+        If StartFlag = 1 And Cells(20 + i, 7) > 21 Then
+            RegressionEndRow = 20 + i
+            EndFlag = 1
+        End If
+        If i = 8 And EndFlag = 0 Then
+            RegressionEndRow = 20 + i
+        End If
+    Next i
+
+'   regression calculation and output results
+    ThisWorkbook.Sheets("Main").Range("N4").Value = "G" & RegressionStartRow & ":G" & RegressionEndRow
+    Y_REG_RANGE = Range("N4").Value
+    X_REG_RANGE = Range("O4").Value
+    Worksheets("Main").Range("N19:R23").FormulaArray = "=LINEST(" & Y_REG_RANGE & "," & X_REG_RANGE & "^{1,2},,TRUE)"
+    Range("P4").Value = Range("N19").Value
+    Range("Q4").Value = Range("O19").Value
+    Range("R4").Value = Range("P19").Value
+    Range("S4").Value = Range("N21").Value
+    Worksheets("Main").Range("N19:R23").Value = ""
+
+'   ---------------------------------------------------------------------------------------------------------------
+'   Detect RSER regression range
+
+    RSER_Bottom = WorksheetFunction.Min(Range("I20:I28"))   'reserved for checking
+    StartFlag = 0
+    EndFlag = 0
+
+'   calculate range: log10(RSER) < -0.5 & iMLSE < 21
+    For i = 0 To 8
+        If StartFlag = 0 And Cells(20 + i, 7) < 21 And Cells(20 + i, 9) < -0.5 Then
+            RegressionStartRow = 20 + i
+            StartFlag = 1
+        End If
+        If StartFlag = 1 And Cells(20 + i, 9) > -0.5 Then
+            RegressionEndRow = 20 + i
+            EndFlag = 1
+        End If
+        If i = 8 And EndFlag = 0 Then
+            RegressionEndRow = 20 + i
+        End If
+    Next i
+
+'   regression calculation and output results
+    ThisWorkbook.Sheets("Main").Range("N5").Value = "I" & RegressionStartRow & ":I" & RegressionEndRow
+    Y_REG_RANGE = Range("N5").Value
+    X_REG_RANGE = Range("O5").Value
+    Worksheets("Main").Range("N19:R23").FormulaArray = "=LINEST(" & Y_REG_RANGE & "," & X_REG_RANGE & "^{1,2},,TRUE)"
+    Range("P5").Value = Range("N19").Value
+    Range("Q5").Value = Range("O19").Value
+    Range("R5").Value = Range("P19").Value
+    Range("S5").Value = Range("N21").Value
+    Worksheets("Main").Range("N19:R23").Value = ""
+
+    Application.ScreenUpdating = True
+    Application.DisplayAlerts = True
+    Application.Calculation = xlAutomatic
