@@ -1,0 +1,494 @@
+'---sub1----------------------------------------------------------------------------------------------------------------------
+'
+    ThisWorkbook.Sheets("DVD_data").Range("C2").Value = ActiveWorkbook.Name
+    ThisWorkbook.Sheets("DVD_data").Range("B5:H31").Value = ""
+    
+    SummaryRange = Cells(1, 1).End(xlDown).Row
+    SummaryRangeString = "A1:A" & SummaryRange
+    
+'   calculate 3 sections: (1)PIE & PIF, (2)Jitter & Asym, (3)REF & MOD
+    PowerPoints = (WorksheetFunction.CountIf(Range(SummaryRangeString), "*]Measure Start*")) / 3
+    
+'   points / margins per layer
+    ThisWorkbook.Sheets("DVD_data").Range("I3").Value = PowerPoints / ThisWorkbook.Sheets("DVD_data").Range("I2").Value
+    
+    ReDim Power(PowerPoints) As Single
+    
+    SHIFT = 0
+    
+    For i = 1 To SummaryRange
+    If InStr(Cells(i, 1), "]Measure Start") > 0 Then
+        PPEnd = InStr(Cells(i, 1), "mW")
+        ThisWorkbook.Sheets("DVD_data").Cells(SHIFT + 5, 2).Value = Val(Mid(Cells(i, 1), PPEnd - 5, 5))
+        SHIFT = SHIFT + 1
+        Power(SHIFT) = Val(Mid(Cells(i, 1), PPEnd - 5, 5))
+        If SHIFT = PowerPoints Then
+        Exit For
+        End If
+    End If
+    Next i
+    
+'-------------------------------------------------------------------------------------------------------
+'---SECTION-1 PIE / PIF---------------------------------------------------------------------------------
+'-------------------------------------------------------------------------------------------------------
+    
+    Cells.Find(What:="address", After:=ActiveCell, LookIn:=xlFormulas, LookAt _
+        :=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, MatchCase:= _
+        False, MatchByte:=False, SearchFormat:=False).Activate
+
+    Section1Row = ActiveCell.Row
+            
+'   subtotal calculation of section1 PIE / PIF            
+    Selection.Subtotal GroupBy:=3, Function:=xlMax, TotalList:=Array(4, 5), _
+        Replace:=False, PageBreaks:=False, SummaryBelowData:=True
+       
+    Cells.Find(What:="address", After:=ActiveCell, LookIn:=xlFormulas, LookAt _
+        :=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, MatchCase:= _
+        False, MatchByte:=False, SearchFormat:=False).Activate
+
+    Section2Row = ActiveCell.Row
+        
+    Cells(Section1Row, 1).Activate
+    
+    ReDim PIE(PowerPoints) As Integer
+    ReDim PIF(PowerPoints) As Integer
+       
+    InitialDataRow = Section1Row + 1
+    SHIFT = 1
+    
+    Do While InitialDataRow <= (Section2Row - 3)
+        
+    If Cells(InitialDataRow, 1) = "" Then
+        ValueCheck = Val(Cells(InitialDataRow, 3))
+        
+        If Power(SHIFT) = ValueCheck Then
+        PIE(SHIFT) = Cells(InitialDataRow, 4)
+        PIF(SHIFT) = Cells(InitialDataRow, 5)
+        SHIFT = SHIFT + 1
+        InitialDataRow = InitialDataRow + 1
+        
+        ElseIf Power(SHIFT) <> ValueCheck Then
+        PIE(SHIFT) = -99
+        PIF(SHIFT) = -99
+        SHIFT = SHIFT + 1
+        InitialDataRow = InitialDataRow - 1        
+        End If
+
+    End If
+    
+        InitialDataRow = InitialDataRow + 1        
+    Loop
+    
+    For i = 1 To PowerPoints
+    ThisWorkbook.Sheets("DVD_data").Cells(i + 4, 3).Value = PIE(i)
+    ThisWorkbook.Sheets("DVD_data").Cells(i + 4, 4).Value = PIF(i)
+    Next i
+
+'-------------------------------------------------------------------------------------------------------
+'---SECTION-2 Jitter / Asymmetry------------------------------------------------------------------------
+'-------------------------------------------------------------------------------------------------------
+
+    Cells(Section2Row, 1).Activate
+    
+    Selection.Subtotal GroupBy:=3, Function:=xlAverage, TotalList:=Array(4, 5), _
+        Replace:=False, PageBreaks:=False, SummaryBelowData:=True
+    
+    Cells.Find(What:="address", After:=ActiveCell, LookIn:=xlFormulas, LookAt _
+        :=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, MatchCase:= _
+        False, MatchByte:=False, SearchFormat:=False).Activate
+
+    Section3Row = ActiveCell.Row
+    
+    Cells(Section2Row, 1).Activate
+    
+    ReDim Jitter(PowerPoints) As Single
+    ReDim ASYM(PowerPoints) As Single
+       
+    InitialDataRow = Section2Row + 1
+    SHIFT = 1
+    
+    Do While InitialDataRow <= (Section3Row - 3)
+    If Cells(InitialDataRow, 1) = "" Then
+        ValueCheck = Val(Cells(InitialDataRow, 3))
+        
+        If Power(SHIFT) = ValueCheck Then
+        Jitter(SHIFT) = Cells(InitialDataRow, 4)
+        ASYM(SHIFT) = Cells(InitialDataRow, 5)
+        SHIFT = SHIFT + 1
+        InitialDataRow = InitialDataRow + 1
+        
+        ElseIf Power(SHIFT) <> ValueCheck Then
+        Jitter(SHIFT) = 99
+        ASYM(SHIFT) = -1
+        SHIFT = SHIFT + 1
+        InitialDataRow = InitialDataRow - 1
+        
+        End If
+        
+    End If
+    
+        InitialDataRow = InitialDataRow + 1
+        
+    Loop
+    
+    For i = 1 To PowerPoints
+    ThisWorkbook.Sheets("DVD_data").Cells(i + 4, 5).Value = Jitter(i)
+    ThisWorkbook.Sheets("DVD_data").Cells(i + 4, 6).Value = ASYM(i) / 100
+    Next i
+        
+'-------------------------------------------------------------------------------------------------------
+'---SECTION-3 REF / MOD---------------------------------------------------------------------------------
+'-------------------------------------------------------------------------------------------------------
+    
+    Cells(Section3Row, 1).Activate
+    
+    Selection.Subtotal GroupBy:=3, Function:=xlAverage, TotalList:=Array(4, 5), _
+        Replace:=False, PageBreaks:=False, SummaryBelowData:=True
+    
+    SectionEndRow = Cells(Section3Row, 5).End(xlDown).Row
+    
+    ReDim REF(PowerPoints) As Single
+    ReDim MODU(PowerPoints) As Single
+    
+    InitialDataRow = Section3Row + 1
+    SHIFT = 1
+    
+    Do While InitialDataRow <= (SectionEndRow - 1)
+    If Cells(InitialDataRow, 1) = "" Then
+        ValueCheck = Val(Cells(InitialDataRow, 3))
+        
+        If Power(SHIFT) = ValueCheck Then
+        REF(SHIFT) = Cells(InitialDataRow, 4)
+        MODU(SHIFT) = Cells(InitialDataRow, 5)
+        SHIFT = SHIFT + 1
+        InitialDataRow = InitialDataRow + 1
+        
+        ElseIf Power(SHIFT) <> ValueCheck Then
+        REF(SHIFT) = -99
+        MODU(SHIFT) = -1
+        SHIFT = SHIFT + 1
+        InitialDataRow = InitialDataRow - 1
+        
+        End If
+        
+    End If
+    
+        InitialDataRow = InitialDataRow + 1
+        
+    Loop
+    
+    For i = 1 To PowerPoints
+    ThisWorkbook.Sheets("DVD_data").Cells(i + 4, 7).Value = REF(i)
+    ThisWorkbook.Sheets("DVD_data").Cells(i + 4, 8).Value = MODU(i) / 100
+    Next i
+
+'breakpoint = 1    'macro check break point
+
+'-----------------------------------------------------------------------------------------------------------------------------
+'---sub2----------------------------------------------------------------------------------------------------------------------
+'-----------------------------------------------------------------------------------------------------------------------------
+   
+    Sheets("DVD_data").Select
+    Range("O5").Select
+    PowerMargin_Step = ThisWorkbook.Sheets("DVD_data").Range("I3").Value
+    Detect_StartRow = ActiveCell.Row
+    Detect_EndRow = Cells(ActiveCell.Row, 2).End(xlDown).Row
+    SHIFT = 0
+    COUNTER = 0
+    
+'   fill empty or over limit data with error mark
+    
+    For i = Detect_StartRow To Detect_EndRow Step PowerMargin_Step
+    For j = 1 To PowerMargin_Step
+    
+    'jitter, column 5, limitation 20
+        If Cells(i + j - 1, 5) = "" Or Cells(i + j - 1, 5) > 20 Or Cells(i + j - 1, 5) < 0 Then
+        Cells(i + j - 1, 5) = "Error"
+        End If
+    'PIE maximum, column 3
+        If Cells(i + j - 1, 3) = "" Or Cells(i + j - 1, 3) < 0 Then
+        Cells(i + j - 1, 3) = "Error"
+        End If
+    'PIF, column 4
+        If Cells(i + j - 1, 4) = "" Or Cells(i + j - 1, 4) < 0 Then
+        Cells(i + j - 1, 4) = "Error"
+        End If
+    'Asymmetry, column 6
+        If Cells(i + j - 1, 6) = "" Or Abs(Val(Cells(i + j - 1, 6))) > 0.3 Then
+        Cells(i + j - 1, 6) = "Error"
+        End If
+    'Reflectivity, column 7
+        If Cells(i + j - 1, 7) = "" Or Cells(i + j - 1, 7) < 0 Then
+        Cells(i + j - 1, 7) = "Error"
+        End If
+    'Modulation, column 8
+        If Cells(i + j - 1, 8) = "" Or Cells(i + j - 1, 8) < 0 Then
+        Cells(i + j - 1, 8) = "Error"
+        End If
+
+    Next j
+    Next i
+    
+    For i = Detect_StartRow To Detect_EndRow Step PowerMargin_Step
+    
+'   check jitter minimum value in rows, column 5
+    Temp_Jitter = WorksheetFunction.Min(Range("E" & i & ":E" & (i + (PowerMargin_Step - 1))))
+    For j = 1 To PowerMargin_Step
+        If Cells(i + j - 1, 5) = Temp_Jitter Then
+        Jitter_MinValue = j
+        REF_MedianValue = j
+        COUNTER = COUNTER + 1
+        Exit For
+        End If
+    Next j
+    
+'   check PIE minimum value in rows, column 3
+    Temp_PIE = WorksheetFunction.Min(Range("C" & i & ":C" & (i + (PowerMargin_Step - 1))))
+    For j = 1 To PowerMargin_Step
+        If Cells(i + j - 1, 3) = Temp_PIE Then
+        PIE_MinValue = j
+        Exit For
+        End If
+    Next j
+    
+'   check Asymmetry median value in rows, column 6
+    Temp_ASYM = WorksheetFunction.Median(Range("F" & i & ":F" & (i + (PowerMargin_Step - 1))))
+    For j = 1 To PowerMargin_Step
+        If Cells(i + j - 1, 6) >= Temp_ASYM And Cells(i + j - 1, 6) <> "Error" Then
+        ASYM_MedianValue = j
+        Exit For
+        End If
+    Next j
+
+'   check modulaion median value in rows, column 8
+    Temp_MOD = WorksheetFunction.Median(Range("H" & i & ":H" & (i + (PowerMargin_Step - 1))))
+    For j = 1 To PowerMargin_Step
+        If Cells(i + j - 1, 8) >= Temp_MOD And Cells(i + j - 1, 8) <> "Error" Then
+        MOD_MedianValue = j
+        Exit For
+        End If
+    Next j
+
+'------------------------------------------------------------------------------------
+' define regression row range, jitter column 5
+'------------------------------------------------------------------------------------
+    
+    For k = 1 To PowerMargin_Step
+        If k < Jitter_MinValue And Cells(i + k - 1, 5) = "Error" Then
+        REGStartRow = i + k
+        ElseIf k > Jitter_MinValue And Cells(i + k - 1, 5) = "Error" And REGEndRow = 0 Then
+        REGEndRow = i + k - 2
+        End If
+        If k = PowerMargin_Step Then
+            If REGStartRow = 0 Then
+            REGStartRow = i
+            End If
+            If REGEndRow = 0 Then
+            REGEndRow = i + (PowerMargin_Step - 1)
+            End If
+            Jitter_REGString = "E" & REGStartRow & ":E" & REGEndRow
+            Cells(5 + COUNTER, 15) = Jitter_REGString
+            REGStartRow = 0
+            REGEndRow = 0
+        End If
+    Next k
+    
+'------------------------------------------------------------------------------------
+' define regression row range, PIE column 3
+'------------------------------------------------------------------------------------
+    
+    For k = 1 To PowerMargin_Step
+        If k < PIE_MinValue And Cells(i + k - 1, 3) = "Error" Then
+        REGStartRow = i + k
+        ElseIf k > PIE_MinValue And Cells(i + k - 1, 3) = "Error" And REGEndRow = 0 Then
+        REGEndRow = i + k - 2
+        End If
+        If k = PowerMargin_Step Then
+            If REGStartRow = 0 Then
+            REGStartRow = i
+            End If
+            If REGEndRow = 0 Then
+            REGEndRow = i + (PowerMargin_Step - 1)
+            End If
+            PIE_REGString = "C" & REGStartRow & ":C" & REGEndRow
+            Cells(5 + COUNTER, 19) = PIE_REGString
+            REGStartRow = 0
+            REGEndRow = 0
+        End If
+    Next k
+    
+'------------------------------------------------------------------------------------
+' define regression row range, asymmetry column 6
+'------------------------------------------------------------------------------------
+
+    For k = 1 To PowerMargin_Step
+        If k < ASYM_MedianValue And Cells(i + k - 1, 6) = "Error" Then
+        REGStartRow = i + k
+        ElseIf k > ASYM_MedianValue And Cells(i + k - 1, 6) = "Error" And REGEndRow = 0 Then
+        REGEndRow = i + k - 2
+        End If
+        If k = PowerMargin_Step Then
+            If REGStartRow = 0 Then
+            REGStartRow = i
+            End If
+            If REGEndRow = 0 Then
+            REGEndRow = i + (PowerMargin_Step - 1)
+            End If
+            ASYM_REGString = "F" & REGStartRow & ":F" & REGEndRow
+            Cells(5 + COUNTER, 16) = ASYM_REGString
+            REGStartRow = 0
+            REGEndRow = 0
+        End If
+    Next k
+    
+'------------------------------------------------------------------------------------
+' define regression row range, reflectivity column 7
+'------------------------------------------------------------------------------------
+
+    For k = 1 To PowerMargin_Step
+        If k < REF_MedianValue And Cells(i + k - 1, 7) = "Error" Then
+        REGStartRow = i + k
+        ElseIf k > REF_MedianValue And Cells(i + k - 1, 7) = "Error" And REGEndRow = 0 Then
+        REGEndRow = i + k - 2
+        End If
+        If k = PowerMargin_Step Then
+            If REGStartRow = 0 Then
+            REGStartRow = i
+            End If
+            If REGEndRow = 0 Then
+            REGEndRow = i + (PowerMargin_Step - 1)
+            End If
+            REF_REGString = "G" & REGStartRow & ":G" & REGEndRow
+            Cells(5 + COUNTER, 17) = REF_REGString
+            REGStartRow = 0
+            REGEndRow = 0
+        End If
+    Next k
+    
+'------------------------------------------------------------------------------------
+' define regression row range, modulation column 8
+'------------------------------------------------------------------------------------
+
+    For k = 1 To PowerMargin_Step
+        If k < MOD_MedianValue And Cells(i + k - 1, 8) = "Error" Then
+        REGStartRow = i + k
+        ElseIf k > MOD_MedianValue And Cells(i + k - 1, 8) = "Error" And REGEndRow = 0 Then
+        REGEndRow = i + k - 2
+        End If
+        If k = PowerMargin_Step Then
+            If REGStartRow = 0 Then
+            REGStartRow = i
+            End If
+            If REGEndRow = 0 Then
+            REGEndRow = i + (PowerMargin_Step - 1)
+            End If
+            MOD_REGString = "H" & REGStartRow & ":H" & REGEndRow
+            Cells(5 + COUNTER, 18) = MOD_REGString
+            REGStartRow = 0
+            REGEndRow = 0
+        End If
+    Next k
+        
+    Next i
+        
+'-----------------------------------------------------------------------------------------------------------------------------
+'---sub3----------------------------------------------------------------------------------------------------------------------
+'-----------------------------------------------------------------------------------------------------------------------------
+
+    Dim Y_REG_RANGE As String
+    Dim X_REG_RANGE As String
+    Layer_Step = 3
+ 
+    Worksheets("DVD_data").Select
+    
+    Cells.Find(What:="Regression paremeters", After:=ActiveCell, LookIn:=xlFormulas, LookAt _
+        :=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, MatchCase:= _
+        False, MatchByte:=False, SearchFormat:=False).Activate
+        
+    Dim OutputR As Range
+    Set OutputR = Range(Cells(ActiveCell.Row + 1, ActiveCell.Column), Cells(ActiveCell.Row + 6, ActiveCell.Column + 4))
+
+'   Power VS. PIE Regression
+
+    Cells.Find(What:="Regression range", After:=ActiveCell, LookIn:=xlFormulas, LookAt _
+        :=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, MatchCase:= _
+        False, MatchByte:=False, SearchFormat:=False).Activate
+    
+    Dim RegressionR As Range
+    Set RegressionR = Range(Cells(ActiveCell.Row + 2, ActiveCell.Column), Cells(ActiveCell.Row + 4, ActiveCell.Column + 4))
+    'RegressionR.Select
+        
+    For i = 1 To Layer_Step
+
+    Y_REG_RANGE = RegressionR.Value2(i, 5)
+    X_REG_RANGE = Replace(RegressionR.Value2(i, 5), "C", "B")
+    OutputR.FormulaArray = "=LINEST(" & Y_REG_RANGE & "," & X_REG_RANGE & "^{1,2},,TRUE)"
+    Worksheets("DVD_data").Cells(i + 25, 15).Value = OutputR.Value2(1, 1)
+    Worksheets("DVD_data").Cells(i + 25, 16).Value = OutputR.Value2(1, 2)
+    Worksheets("DVD_data").Cells(i + 25, 17).Value = OutputR.Value2(1, 3)
+    Worksheets("DVD_data").Cells(i + 25, 18).Value = OutputR.Value2(3, 1)
+
+    Next i
+
+'   Power VS. Jitter Regression
+
+    For i = 1 To Layer_Step
+
+    Y_REG_RANGE = RegressionR.Value2(i, 1)
+    X_REG_RANGE = Replace(RegressionR.Value2(i, 1), "E", "B")
+    OutputR.FormulaArray = "=LINEST(" & Y_REG_RANGE & "," & X_REG_RANGE & "^{1,2},,TRUE)"
+    Worksheets("DVD_data").Cells(i + 9, 15).Value = OutputR.Value2(1, 1)
+    Worksheets("DVD_data").Cells(i + 9, 16).Value = OutputR.Value2(1, 2)
+    Worksheets("DVD_data").Cells(i + 9, 17).Value = OutputR.Value2(1, 3)
+    Worksheets("DVD_data").Cells(i + 9, 18).Value = OutputR.Value2(3, 1)
+
+    Next i
+
+'   Power VS. Asymmetry Regression
+
+    For i = 1 To Layer_Step
+
+    Y_REG_RANGE = RegressionR.Value2(i, 2)
+    X_REG_RANGE = Replace(RegressionR.Value2(i, 2), "F", "B")
+    OutputR.FormulaArray = "=LINEST(" & Y_REG_RANGE & "," & X_REG_RANGE & "^{1,2,3},,TRUE)"
+    Worksheets("DVD_data").Cells(i + 13, 15).Value = OutputR.Value2(1, 1)
+    Worksheets("DVD_data").Cells(i + 13, 16).Value = OutputR.Value2(1, 2)
+    Worksheets("DVD_data").Cells(i + 13, 17).Value = OutputR.Value2(1, 3)
+    Worksheets("DVD_data").Cells(i + 13, 18).Value = OutputR.Value2(1, 4)
+    Worksheets("DVD_data").Cells(i + 13, 19).Value = OutputR.Value2(3, 1)
+
+    Next i
+
+'   Power VS. Reflectivity Regression
+
+    For i = 1 To Layer_Step
+
+    Y_REG_RANGE = RegressionR.Value2(i, 3)
+    X_REG_RANGE = Replace(RegressionR.Value2(i, 3), "G", "B")
+    OutputR.FormulaArray = "=LINEST(" & Y_REG_RANGE & "," & X_REG_RANGE & "^{1,2,3},,TRUE)"
+    Worksheets("DVD_data").Cells(i + 17, 15).Value = OutputR.Value2(1, 1)
+    Worksheets("DVD_data").Cells(i + 17, 16).Value = OutputR.Value2(1, 2)
+    Worksheets("DVD_data").Cells(i + 17, 17).Value = OutputR.Value2(1, 3)
+    Worksheets("DVD_data").Cells(i + 17, 18).Value = OutputR.Value2(1, 4)
+    Worksheets("DVD_data").Cells(i + 17, 19).Value = OutputR.Value2(3, 1)
+
+    Next i
+
+'   Power VS. Modulation Regression
+
+    For i = 1 To Layer_Step
+
+    Y_REG_RANGE = RegressionR.Value2(i, 4)
+    X_REG_RANGE = Replace(RegressionR.Value2(i, 4), "H", "B")
+    OutputR.FormulaArray = "=LINEST(" & Y_REG_RANGE & "," & X_REG_RANGE & "^{1,2,3},,TRUE)"
+    Worksheets("DVD_data").Cells(i + 21, 15).Value = OutputR.Value2(1, 1)
+    Worksheets("DVD_data").Cells(i + 21, 16).Value = OutputR.Value2(1, 2)
+    Worksheets("DVD_data").Cells(i + 21, 17).Value = OutputR.Value2(1, 3)
+    Worksheets("DVD_data").Cells(i + 21, 18).Value = OutputR.Value2(1, 4)
+    Worksheets("DVD_data").Cells(i + 21, 19).Value = OutputR.Value2(3, 1)
+
+    Next i
+    
+    OutputR.Value = ""
+        
+'---------------------------------------------------------------------------------------------------------------------------
