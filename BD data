@@ -1,4 +1,4 @@
-Sub BDData()
+'---sub1----------------------------------------------------------------------------------------------------------------------
 '
     ThisWorkbook.Sheets("BD_data").Range("C2").Value = ActiveWorkbook.Name
     ThisWorkbook.Sheets("BD_data").Range("B5:H85").Value = ""
@@ -6,13 +6,14 @@ Sub BDData()
     SummaryRange = Cells(1, 1).End(xlDown).Row
     SummaryRangeString = "A1:A" & SummaryRange
 
-'3 sections, (1) RSER & BE (2) SER & Asym (3) REF & MOD
+'   3 sections: (1)RSER & BE, (2)SER & Asym., (3)REF & MOD
     PowerPoints = (WorksheetFunction.CountIf(Range(SummaryRangeString), "*]Measure Start*")) / 3
         
     JudgeA = InStr(Cells(SummaryRange - 2, 1), "[") + 1
     JudgeB = InStr(Cells(SummaryRange - 2, 1), "]")
     JudgeC = WorksheetFunction.Hex2Dec(Mid(Cells(SummaryRange - 2, 1), JudgeA, JudgeB - JudgeA))
-    
+
+'   layer judge
     If JudgeC < 14000000 Then
         ThisWorkbook.Sheets("BD_data").Range("K2").Value = 1
     ElseIf JudgeC > 14000000 And JudgeC < 22000000 Then
@@ -21,10 +22,10 @@ Sub BDData()
         ThisWorkbook.Sheets("BD_data").Range("K2").Value = 3
     End If
     
-'power steps in margin
+'   power steps in each margin
     ThisWorkbook.Sheets("BD_data").Range("I2").Value = Val(Mid(Cells(SummaryRange - 1, 1), 3, 1)) / ThisWorkbook.Sheets("BD_data").Range("K2").Value
     
-'points per layer
+'   points per layer
     ThisWorkbook.Sheets("BD_data").Range("I3").Value = PowerPoints / ThisWorkbook.Sheets("BD_data").Range("K2").Value
     
     ReDim Power(PowerPoints) As Single
@@ -53,8 +54,7 @@ Sub BDData()
 
     Section1Row = ActiveCell.Row
             
-'subtotal calculation of section1 RSER / BE
-            
+'   subtotal calculation of section1 RSER / BE            
     Selection.Subtotal GroupBy:=3, Function:=xlAverage, TotalList:=Array(4), _
         Replace:=False, PageBreaks:=False, SummaryBelowData:=True
        
@@ -192,11 +192,10 @@ Sub BDData()
     ThisWorkbook.Sheets("BD_data").Cells(i + 4, 7).Value = REF(i)
     ThisWorkbook.Sheets("BD_data").Cells(i + 4, 8).Value = MODU(i) / 100
     Next i
-
-    'aaa = 1    'macro check break point
     
-End Sub
-Sub BDRegression_ErrorDetect()
+'-----------------------------------------------------------------------------------------------------------------------------
+'---sub2----------------------------------------------------------------------------------------------------------------------
+'-----------------------------------------------------------------------------------------------------------------------------
    
     Sheets("BD_data").Select
     ThisWorkbook.Sheets("BD_data").Range("N6:Q14").Value = ""
@@ -207,7 +206,7 @@ Sub BDRegression_ErrorDetect()
     SHIFT = 0
     COUNTER = 0
     
-' fill empty or over limit data with error mark
+'   fill empty or over limit data with error mark
     
     For i = Detect_StartRow To Detect_EndRow Step PowerMargin_Step
     For j = 1 To PowerMargin_Step
@@ -242,7 +241,7 @@ Sub BDRegression_ErrorDetect()
         
     For i = Detect_StartRow To Detect_EndRow Step PowerMargin_Step
     
-' check RSER minimum value in rows, column 3
+'   check RSER minimum value in rows, column 3
     Temp_RSER = WorksheetFunction.Min(Range("C" & i & ":C" & (i + (PowerMargin_Step - 1))))
     For j = 1 To PowerMargin_Step
         If Cells(i + j - 1, 3) = Temp_RSER Then
@@ -253,7 +252,7 @@ Sub BDRegression_ErrorDetect()
         End If
     Next j
         
-' check Asymmetry median value in rows, column 6
+'   check Asymmetry median value in rows, column 6
     Temp_ASYM = WorksheetFunction.Median(Range("F" & i & ":F" & (i + (PowerMargin_Step - 1))))
     For j = 1 To PowerMargin_Step
         If Cells(i + j - 1, 6) >= Temp_ASYM And Cells(i + j - 1, 6) <> "Error" Then
@@ -262,7 +261,7 @@ Sub BDRegression_ErrorDetect()
         End If
     Next j
 
-' check modulaion median value in rows, column 8
+'   check modulaion median value in rows, column 8
     Temp_MOD = WorksheetFunction.Median(Range("H" & i & ":H" & (i + (PowerMargin_Step - 1))))
     For j = 1 To PowerMargin_Step
         If Cells(i + j - 1, 8) >= Temp_MOD And Cells(i + j - 1, 8) <> "Error" Then
@@ -369,9 +368,10 @@ Sub BDRegression_ErrorDetect()
         
     Next i
         
-End Sub
-Sub BDRegression_Calculation()
-'
+'-----------------------------------------------------------------------------------------------------------------------------
+'---sub3----------------------------------------------------------------------------------------------------------------------
+'-----------------------------------------------------------------------------------------------------------------------------
+
     Dim Y_REG_RANGE As String
     Dim X_REG_RANGE As String
     Layer_Step = Worksheets("BD_data").Range("I2").Value * Worksheets("BD_data").Range("K2").Value
@@ -393,8 +393,7 @@ Sub BDRegression_Calculation()
     Set RegressionR = Range(Cells(ActiveCell.Row + 2, ActiveCell.Column), Cells(ActiveCell.Row + 10, ActiveCell.Column + 3))
     RegressionR.Select
         
-' Power VS. RSER Regression
-
+'   Power VS. RSER Regression
     ThisWorkbook.Sheets("BD_data").Range("N16:Q24").Value = ""
     
     For i = 1 To Layer_Step
@@ -411,8 +410,7 @@ Sub BDRegression_Calculation()
 
     Next i
 
-' Power VS. Asymmetry Regression
-
+'   Power VS. Asymmetry Regression
     ThisWorkbook.Sheets("BD_data").Range("N26:R34").Value = ""
 
     For i = 1 To Layer_Step
@@ -430,8 +428,7 @@ Sub BDRegression_Calculation()
 
     Next i
 
-' Power VS. Reflectivity Regression
-
+'   Power VS. Reflectivity Regression
     ThisWorkbook.Sheets("BD_data").Range("N36:R44").Value = ""
 
     For i = 1 To Layer_Step
@@ -449,8 +446,7 @@ Sub BDRegression_Calculation()
 
     Next i
 
-' Power VS. Modulation Regression
-
+'   Power VS. Modulation Regression
     ThisWorkbook.Sheets("BD_data").Range("N46:R54").Value = ""
 
     For i = 1 To Layer_Step
@@ -470,4 +466,4 @@ Sub BDRegression_Calculation()
     
     OutputR.Value = ""
         
-End Sub
+'-----------------------------------------------------------------------------------------------------------------------------
