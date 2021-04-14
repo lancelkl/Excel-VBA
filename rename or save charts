@@ -1,0 +1,94 @@
+'--------------------------------------------------------------------------------------------
+'----chart rename----------------------------------------------------------------------------
+'--------------------------------------------------------------------------------------------
+
+    Dim ChrtObj As Object, i As Integer
+
+    With Worksheets("main")
+        For Each ChrtObj In .ChartObjects
+            i = i + 1
+            ChrtObj.Name = Format(i, """Chart""0")
+        Next ChrtObj
+    End With
+    
+'--------------------------------------------------------------------------------------------
+'----chart save------------------------------------------------------------------------------
+'--------------------------------------------------------------------------------------------
+
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+    
+    Sheets("Main").Select
+    
+    QC1 = InStr(UCase(Range("F2")), "QC1")
+    QC2 = InStr(UCase(Range("F2")), "QC2")
+    QC3 = InStr(UCase(Range("F2")), "QC3")
+    LOTDATE = Left(Range("F2"), 8)
+    LOTDISCNumber = Range("G4")
+        
+    If QC1 > 0 Then
+        LOTQCLabel = "QC1"
+        LOTThicknessLabel = "S1"
+    End If
+    
+    If QC2 > 0 Then
+        LOTQCLabel = "QC2"
+        LOTThicknessLabel = "S2"
+    End If
+        
+    If QC3 > 0 Then
+        LOTQCLabel = "QC3"
+        LOTThicknessLabel = "CC"
+    End If
+        
+    For i = 1 To 10
+
+    SAVECHARTName = "Chart" & i
+    ActiveSheet.ChartObjects(SAVECHARTName).Activate
+    ActiveChart.ChartArea.Copy
+   
+        If i = 1 Then
+        SaveFileName = "E:\" & LOTDATE & "_" & LOTQCLabel & "_" & LOTDISCNumber & "_Radial-tilt-ave" & ".png"
+        ActiveChart.Export SaveFileName
+        End If
+        If i = 2 Then
+        SaveFileName = "E:\" & LOTDATE & "_" & LOTQCLabel & "_" & LOTDISCNumber & "_Radial-tilt-delta" & ".png"
+        ActiveChart.Export SaveFileName
+        End If
+        If i = 3 Then
+        SaveFileName = "E:\" & LOTDATE & "_" & LOTQCLabel & "_" & LOTDISCNumber & "_Tangential-tilt-delta" & ".png"
+        ActiveChart.Export SaveFileName
+        End If
+        If i = 4 Then
+        SaveFileName = "E:\" & LOTDATE & "_" & LOTQCLabel & "_" & LOTDISCNumber & "_Vertical-tilt-ave" & ".png"
+        ActiveChart.Export SaveFileName
+        End If
+        If i = 5 Then
+        SaveFileName = "E:\" & LOTDATE & "_" & LOTQCLabel & "_" & LOTDISCNumber & "_Vertical-runout" & ".png"
+        ActiveChart.Export SaveFileName
+        End If
+        If i = 6 Then
+        SaveFileName = "E:\" & LOTDATE & "_" & LOTQCLabel & "_" & LOTDISCNumber & "_Aacc-delta" & ".png"
+        ActiveChart.Export SaveFileName
+        End If
+        If i = 7 Then
+        SaveFileName = "E:\" & LOTDATE & "_" & LOTQCLabel & "_" & LOTDISCNumber & "_" & LOTThicknessLabel & "-thickness-ave" & ".png"
+        ActiveChart.Export SaveFileName
+        End If
+        If i = 8 Then
+        SaveFileName = "E:\" & LOTDATE & "_" & LOTQCLabel & "_" & LOTDISCNumber & "_" & LOTThicknessLabel & "-thickness-delta" & ".png"
+        ActiveChart.Export SaveFileName
+        End If
+        If i = 9 Then
+        SaveFileName = "E:\" & LOTDATE & "_" & LOTQCLabel & "_" & LOTDISCNumber & "_" & LOTThicknessLabel & "-thickness-disc" & ".png"
+        ActiveChart.Export SaveFileName
+        End If
+        If i = 10 Then
+        SaveFileName = "E:\" & LOTDATE & "_" & LOTQCLabel & "_" & LOTDISCNumber & "_" & LOTThicknessLabel & "-thickness-disc-delta" & ".png"
+        ActiveChart.Export SaveFileName
+        End If
+        
+    Next i
+    
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
