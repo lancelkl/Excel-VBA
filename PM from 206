@@ -1,0 +1,169 @@
+' -------------------------------------------------------------------------------------------------------------------------------------------------
+' Load_L0 data
+' -------------------------------------------------------------------------------------------------------------------------------------------------
+
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+
+    ChDrive "D"
+    ChDir "D:\TL PM of BDT-206\IPQC_PM\L0\"
+    OpenFileName = Application.GetOpenFilename("Layer 0 CSV file, *.csv")
+    If OpenFileName = False Then End
+
+    Workbooks.Open Filename:=OpenFileName
+    Book_Name = ActiveWorkbook.Name
+    
+    ThisWorkbook.Sheets("Main").Range("B9") = Left(Book_Name, InStr(Trim(Book_Name), ".") - 1)
+
+    Cells.Find(What:="Electric", After:=ActiveCell, LookIn:=xlFormulas, LookAt _
+        :=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, MatchCase:= _
+        False, MatchByte:=False, SearchFormat:=False).Activate
+
+    Cells.Find(What:="Point1", After:=ActiveCell, LookIn:=xlFormulas, LookAt _
+        :=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, MatchCase:= _
+        False, MatchByte:=False, SearchFormat:=False).Activate
+
+    Point1Row = ActiveCell.Row
+    Point1Column = ActiveCell.Column
+       
+    For i = 0 To 19
+        
+    ThisWorkbook.Sheets("Raw").Cells(4 + i, 2).Value = Cells(Point1Row + 2, Point1Column + i)
+    ThisWorkbook.Sheets("Raw").Cells(4 + i, 3).Value = Cells(Point1Row + 5, Point1Column + i)
+    ThisWorkbook.Sheets("Raw").Cells(4 + i, 4).Value = Cells(Point1Row + 6, Point1Column + i)
+    
+'retrieve iMLSE value, if value > 20 judge as error
+    If Cells(Point1Row + 7, Point1Column + i).Value > 20 Then
+    ThisWorkbook.Sheets("Raw").Cells(4 + i, 5).Value = "Error"
+    Else
+    ThisWorkbook.Sheets("Raw").Cells(4 + i, 5).Value = Cells(Point1Row + 7, Point1Column + i)
+    End If
+    
+'retrieve RESR value and transfer to log value, if RSER value > 0.1 judge as error
+    If Cells(Point1Row + 10, Point1Column + i).Value > 0.1 Then
+    ThisWorkbook.Sheets("Raw").Cells(4 + i, 6).Value = "Error"
+    Else
+    ThisWorkbook.Sheets("Raw").Cells(4 + i, 6).Value = WorksheetFunction.Log10(Cells(Point1Row + 10, Point1Column + i))
+    End If
+    
+    Next i
+    
+    Workbooks(Book_Name).Close SaveChanges:=False
+
+    Call Reg2_Cal(5)
+    Call Reg2_Cal(6)
+    Call Reg3_Cal(2)
+    Call Reg3_Cal(3)
+    Call Reg3_Cal(4)
+    Application.ScreenUpdating = True
+    Application.DisplayAlerts = True    
+' -------------------------------------------------------------------------------------------------------------------------------------------------
+
+' -------------------------------------------------------------------------------------------------------------------------------------------------
+' Sub Reg2_Cal(LayerSelect)
+' quadratic function
+' -------------------------------------------------------------------------------------------------------------------------------------------------
+
+    Dim Y_Range(2) As String
+ 
+    Worksheets("Raw").Select
+    'Application.Calculation = xlAutomatic
+
+'write power vs. iMLSE regression       (LayerSelect Value => layer 0 = 5, layer 1 = 11, layer 2 = 17)
+'write power vs. log10(RSER) regression (LayerSelect Value => layer 0 = 6, layer 1 = 12, layer 2 = 18)
+'------------------------------------------------------------------------------------------------------------
+    
+'for inner radius  i = 4~10
+'for middle radius i = 11~16
+'for outer radius  i = 17~23
+'------------------------------------------------------------------------------------------------------------
+
+    i_Start = 4
+    i_End = 10
+    GoSub Calculation
+    i_Start = 11
+    i_End = 16
+    GoSub Calculation
+    i_Start = 17
+    i_End = 23
+    GoSub Calculation
+    GoTo End_Calculation
+
+Calculation:
+
+    StartFlag = 0
+    StopFlag = 0
+
+    For i = i_Start To i_End
+        
+    If Cells(i, LayerSelect) <> "Error" And StartFlag = 0 Then
+    StartFlag = 1
+    Y_Range(0) = Chr(64 + LayerSelect) & i
+    End If
+        
+    If Cells(i, LayerSelect) = "Error" And StartFlag = 1 Then
+    StopFlag = 1
+    Y_Range(1) = ":" & Chr(64 + LayerSelect) & (i - 1)
+    End If
+        
+    If Cells(i, LayerSelect) <> "Error" And StartFlag = 1 And StopFlag = 0 Then
+    Y_Range(1) = ":" & Chr(64 + LayerSelect) & i
+    End If
+    
+    Next i
+    
+    Y_Range(2) = Y_Range(0) & Y_Range(1)
+    X_Range = WorksheetFunction.Substitute(Y_Range(2), Chr(64 + LayerSelect), "A")
+    Worksheets("Raw").Range("T3:W8").FormulaArray = "=LINEST(" & Y_Range(2) & "," & X_Range & "^{1,2},,TRUE)"
+    
+    T3_CheckA = IsNumeric(Worksheets("Raw").Range("T3").Value)
+    If T3_CheckA = False Then
+    MBoxValue = MsgBox("Too few points to calculate regression!!", 16, "Data error!!")
+    GoTo End_Calculation
+    End If
+            
+    If Worksheets("Raw").Range("T3").Value = 0 Then
+    MBoxValue = MsgBox("Too few points to calculate regression!!", 16, "Data error!!")
+    GoTo End_Calculation
+    End If
+                                        
+    For i = i_Start To i_End
+    
+    Cells(23 + i, LayerSelect) = Range("T3") * Cells(23 + i, 1) ^ 2 + Range("U3") * Cells(23 + i, 1) + Range("V3")
+        
+    Next i
+    
+'calculate OPC data
+    OPC_Power = (-1) * Range("U3") / (2 * Range("T3"))
+    
+    If i_Start = 4 Then
+    OPC_Row = 47
+    ElseIf i_Start = 11 Then
+    OPC_Row = 48
+    ElseIf i_Start = 17 Then
+    OPC_Row = 49
+    End If
+    
+    If LayerSelect = 5 Or LayerSelect = 6 Then
+    Cells(OPC_Row, 1) = OPC_Power
+    ElseIf LayerSelect = 11 Then
+    Cells(OPC_Row, 7) = OPC_Power
+    ElseIf LayerSelect = 17 Then
+    Cells(OPC_Row, 13) = OPC_Power
+    End If
+    
+    If LayerSelect = 6 Or LayerSelect = 12 Or LayerSelect = 18 Then
+    Cells(OPC_Row + 3, LayerSelect) = Range("T3") * (OPC_Power * 1.1) ^ 2 + Range("U3") * (OPC_Power * 1.1) + Range("V3")
+    End If
+    
+    Cells(OPC_Row, LayerSelect) = Range("T3") * Cells(OPC_Row, 1) ^ 2 + Range("U3") * Cells(OPC_Row, 1) + Range("V3")
+    
+    Return
+
+End_Calculation:
+
+    Worksheets("Main").Select
+    Range("K8").Select
+    Worksheets("Raw").Range("T3:W8").Value = ""
+    Application.Calculation = xlAutomatic    
+' -------------------------------------------------------------------------------------------------------------------------------------------------
