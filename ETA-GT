@@ -1,0 +1,235 @@
+'---------------------------------------------------------------------------------------------------------------------------------
+'----part 1 in module-------------------------------------------------------------------------------------------------------------
+'---------------------------------------------------------------------------------------------------------------------------------
+
+Sub Load_ETAGT()
+'
+' Load_ETA-GT csv file
+'
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+
+    Worksheets("Data").Select
+    Worksheets("Data").AutoFilterMode = False
+    
+    OpenFileName = Application.GetOpenFilename("ETA-GT CSV file, *.csv")
+    If OpenFileName = False Then End
+
+    Workbooks.Open Filename:=OpenFileName
+    Book_Name = ActiveWorkbook.Name
+    
+    Cells.Find(What:="Date", After:=ActiveCell, LookIn:=xlFormulas, LookAt _
+        :=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, MatchCase:= _
+        False, MatchByte:=False, SearchFormat:=False).Activate
+    
+    Point1Row = ActiveCell.Row
+    Point1Column = ActiveCell.Column
+    
+    InputStart_Row = ThisWorkbook.Sheets("Data").Range("K1").Value + 1
+    Counter = 0
+    D_Value = CDbl(Cells(Point1Row + 1, Point1Column))
+    
+    Do Until D_Value = 0
+    
+    ThisWorkbook.Sheets("Data").Cells(InputStart_Row + Counter, 1) = Cells(Point1Row + 1, Point1Column)         'Date
+    ThisWorkbook.Sheets("Data").Cells(InputStart_Row + Counter, 2) = Cells(Point1Row + 1, Point1Column + 1)     'Time
+    ThisWorkbook.Sheets("Data").Cells(InputStart_Row + Counter, 3) = Cells(Point1Row + 1, Point1Column + 2)     'Sample
+    ThisWorkbook.Sheets("Data").Cells(InputStart_Row + Counter, 4) = Cells(Point1Row + 1, Point1Column + 3)     'User
+    ThisWorkbook.Sheets("Data").Cells(InputStart_Row + Counter, 5) = Cells(Point1Row + 1, Point1Column + 4)     'Info
+    ThisWorkbook.Sheets("Data").Cells(InputStart_Row + Counter, 6) = Cells(Point1Row + 1, Point1Column + 5)     'ECC1
+    ThisWorkbook.Sheets("Data").Cells(InputStart_Row + Counter, 7) = Cells(Point1Row + 1, Point1Column + 11)    'IHD
+    ThisWorkbook.Sheets("Data").Cells(InputStart_Row + Counter, 8) = Cells(Point1Row + 1, Point1Column + 7)     'URD
+    ThisWorkbook.Sheets("Data").Cells(InputStart_Row + Counter, 9) = Cells(Point1Row + 1, Point1Column + 9)     'RRO1
+    ThisWorkbook.Sheets("Data").Cells(InputStart_Row + Counter, 10) = Cells(Point1Row + 1, Point1Column + 18)   'Template
+    
+    Counter = Counter + 1
+    Point1Row = Point1Row + 1
+    D_Value = CDbl(Cells(Point1Row + 1, Point1Column))
+    Loop
+    
+    Workbooks(Book_Name).Close SaveChanges:=False
+    
+    Range("A2").Select
+    Selection.NumberFormatLocal = "yyyy/m/d"
+    Range("B2").Select
+    Selection.NumberFormatLocal = "h:mm;@"
+    Range("C2,D2,E2,J2").Select
+    Selection.NumberFormatLocal = "@"
+    Range("F2:I2").Select
+    Selection.NumberFormatLocal = "0.0000_ "
+    Range("A2:J2").Select
+    With Selection
+        .HorizontalAlignment = xlRight
+        .VerticalAlignment = xlCenter
+        .WrapText = False
+        .Orientation = 0
+        .AddIndent = False
+        .IndentLevel = 0
+        .ShrinkToFit = False
+        .ReadingOrder = xlContext
+        .MergeCells = False
+    End With
+    Selection.Copy
+    Range("A3:J3000").Select
+    Selection.PasteSpecial Paste:=xlPasteFormats, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+    
+    ActiveSheet.Range("$A$1:$K$1000").RemoveDuplicates Columns:=Array(1, 2, 3, 4, 5, 6 _
+        , 7, 8, 9, 10), Header:=xlYes
+       
+    Range("A1").Select
+        
+    Worksheets("Main").Select
+    Call Limit_Line
+    
+    Application.ScreenUpdating = True
+    Application.DisplayAlerts = True
+    Range("F1").Select
+    
+End Sub
+Sub ETAGT_Filter()
+
+    Worksheets("Main").Select
+
+    Value_Sample = Worksheets("Main").ComboBox1.Value
+    Value_User = Worksheets("Main").ComboBox2.Value
+    Value_Info = Worksheets("Main").ComboBox3.Value
+    Value_Template = Worksheets("Main").ComboBox4.Value
+
+    If Value_Sample = "Sample" Or Value_Sample = "" Then
+    Value_Sample = "*"
+    End If
+        
+    If Value_User = "User" Or Value_User = "" Then
+    Value_User = "*"
+    End If
+    
+    If Value_Info = "Info" Or Value_Info = "" Then
+    Value_Info = "*"
+    End If
+        
+    If Value_Template = "Template" Or Value_Template = "" Then
+    Value_Template = "*"
+    End If
+        
+    With Worksheets("Data").Range("A1:J3000")
+    .AutoFilter Field:=3, Criteria1:=Value_Sample
+    .AutoFilter Field:=4, Criteria1:=Value_User
+    .AutoFilter Field:=5, Criteria1:=Value_Info
+    .AutoFilter Field:=10, Criteria1:=Value_Template
+    End With
+
+End Sub
+Sub Limit_Line()
+'
+' add limit line
+'
+    
+    Dim A_Chart As ChartObject
+    
+    ActiveSheet.ChartObjects("Figure 5").Activate
+    X_MinValue = WorksheetFunction.Min(Worksheets("Data").Range("A2:A3000"))
+    X_MaxValue = WorksheetFunction.Max(Worksheets("Data").Range("A2:A3000"))
+    ActiveChart.Axes(xlCategory).MinimumScale = X_MinValue
+    ActiveChart.Axes(xlCategory).MaximumScale = X_MaxValue
+    ActiveChart.SeriesCollection(2).XValues = "={" & X_MinValue & "," & X_MaxValue & " }"
+    ActiveChart.SeriesCollection(2).Values = "={7,7}"
+    Set A_Chart = ActiveSheet.ChartObjects("Figure 5")
+    With A_Chart
+    .Height = 290
+    .Width = 420
+    .Top = [F8].Top
+    .Left = [F8].Left
+    End With
+    
+    
+    ActiveSheet.ChartObjects("Figure 8").Activate
+    ActiveChart.Axes(xlCategory).MinimumScale = X_MinValue
+    ActiveChart.Axes(xlCategory).MaximumScale = X_MaxValue
+    ActiveChart.SeriesCollection(2).XValues = "={" & X_MinValue & "," & X_MaxValue & " }"
+    ActiveChart.SeriesCollection(2).Values = "={21.994,21.994}"
+    Set A_Chart = ActiveSheet.ChartObjects("Figure 8")
+    With A_Chart
+    .Height = 290
+    .Width = 420
+    .Top = [O8].Top
+    .Left = [O8].Left
+    End With
+
+End Sub
+
+'-----------------------------------------------------------------------------------------------------------------------------------
+'----part 2 in workbook-------------------------------------------------------------------------------------------------------------
+'-----------------------------------------------------------------------------------------------------------------------------------
+Private Sub Workbook_Open()
+
+'----retrieve unique elements-----------------------------------------------------------------------------------
+
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+    
+    Dim Element_Sample(), DICT As Object, n As Long         'column3 - sample
+    Set DICT = CreateObject("Scripting.Dictionary")
+
+    Element_Sample = Worksheets("Data").UsedRange.Columns(3).Value
+
+    For n = 1 To UBound(Element_Sample)
+        DICT(Element_Sample(n, 1)) = Empty
+    Next
+
+    Element_Sample = WorksheetFunction.Transpose(DICT.keys())
+    
+    Worksheets("Main").ComboBox1.Value = ""
+    Worksheets("Main").ComboBox1.List = Element_Sample
+    Worksheets("Main").ComboBox1.Text = Worksheets("Main").ComboBox1.List(0)
+
+    Dim Element_User()                                      'column4 - user
+    Set DICT = CreateObject("Scripting.Dictionary")
+
+    Element_User = Worksheets("Data").UsedRange.Columns(4).Value
+
+    For n = 1 To UBound(Element_User)
+        DICT(Element_User(n, 1)) = Empty
+    Next
+
+    Element_User = WorksheetFunction.Transpose(DICT.keys())
+    
+    Worksheets("Main").ComboBox2.Value = ""
+    Worksheets("Main").ComboBox2.List = Element_User
+    Worksheets("Main").ComboBox2.Text = Worksheets("Main").ComboBox2.List(0)
+
+    Dim Element_Info()                                      'column5 - info
+    Set DICT = CreateObject("Scripting.Dictionary")
+
+    Element_Info = Worksheets("Data").UsedRange.Columns(5).Value
+
+    For n = 1 To UBound(Element_Info)
+        DICT(Element_Info(n, 1)) = Empty
+    Next
+
+    Element_Info = WorksheetFunction.Transpose(DICT.keys())
+    
+    Worksheets("Main").ComboBox3.Value = ""
+    Worksheets("Main").ComboBox3.List = Element_Info
+    Worksheets("Main").ComboBox3.Text = Worksheets("Main").ComboBox3.List(0)
+
+    Dim Element_Template()                                 'column10 - template
+    Set DICT = CreateObject("Scripting.Dictionary")
+
+    Element_Template = Worksheets("Data").UsedRange.Columns(10).Value
+
+    For n = 1 To UBound(Element_Template)
+        DICT(Element_Template(n, 1)) = Empty
+    Next
+
+    Element_Template = WorksheetFunction.Transpose(DICT.keys())
+    
+    Worksheets("Main").ComboBox4.Value = ""
+    Worksheets("Main").ComboBox4.List = Element_Template
+    Worksheets("Main").ComboBox4.Text = Worksheets("Main").ComboBox4.List(0)
+
+    Application.ScreenUpdating = True
+    Application.DisplayAlerts = True
+
+End Sub
