@@ -6,10 +6,12 @@ Sub Load_ETAGT()
 '
 ' Load_ETA-GT csv file
 '
-    Application.ScreenUpdating = False
-    Application.DisplayAlerts = False
 
-    Worksheets("Data").Select
+    With Application
+        .ScreenUpdating = False
+        .DisplayAlerts = False
+    End With
+    
     Worksheets("Data").AutoFilterMode = False
     
     OpenFileName = Application.GetOpenFilename("ETA-GT CSV file, *.csv")
@@ -18,14 +20,10 @@ Sub Load_ETAGT()
     Workbooks.Open Filename:=OpenFileName
     Book_Name = ActiveWorkbook.Name
     
-    Cells.Find(What:="Date", After:=ActiveCell, LookIn:=xlFormulas, LookAt _
-        :=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, MatchCase:= _
-        False, MatchByte:=False, SearchFormat:=False).Activate
+    Point1Row = 1
+    Point1Column = 1
     
-    Point1Row = ActiveCell.Row
-    Point1Column = ActiveCell.Column
-    
-    InputStart_Row = ThisWorkbook.Sheets("Data").Range("K1").Value + 1
+    InputStart_Row = WorksheetFunction.CountA(ThisWorkbook.Sheets("Data").Range("A:A")) + 1
     Counter = 0
     D_Value = CDbl(Cells(Point1Row + 1, Point1Column))
     
@@ -49,49 +47,25 @@ Sub Load_ETAGT()
     
     Workbooks(Book_Name).Close SaveChanges:=False
     
-    Range("A2").Select
-    Selection.NumberFormatLocal = "yyyy/m/d"
-    Range("B2").Select
-    Selection.NumberFormatLocal = "h:mm;@"
-    Range("C2,D2,E2,J2").Select
-    Selection.NumberFormatLocal = "@"
-    Range("F2:I2").Select
-    Selection.NumberFormatLocal = "0.0000_ "
-    Range("A2:J2").Select
-    With Selection
-        .HorizontalAlignment = xlRight
-        .VerticalAlignment = xlCenter
-        .WrapText = False
-        .Orientation = 0
-        .AddIndent = False
-        .IndentLevel = 0
-        .ShrinkToFit = False
-        .ReadingOrder = xlContext
-        .MergeCells = False
-    End With
-    Selection.Copy
-    Range("A3:J3000").Select
-    Selection.PasteSpecial Paste:=xlPasteFormats, Operation:=xlNone, _
-        SkipBlanks:=False, Transpose:=False
-    Application.CutCopyMode = False
+    Worksheets("Data").Range("A:A").NumberFormatLocal = "yyyy/m/d"
+    Worksheets("Data").Range("B:B").NumberFormatLocal = "h:mm;@"
+    Worksheets("Data").Range("C:C, D:D, E:E, J:J").NumberFormatLocal = "@"
+    Worksheets("Data").Range("F:F, G:G, H:H, I:I").NumberFormatLocal = "0.0000_ "
     
-    ActiveSheet.Range("$A$1:$K$1000").RemoveDuplicates Columns:=Array(1, 2, 3, 4, 5, 6 _
+    Used_DataRange = "$A$2:$J$" & WorksheetFunction.CountA(Sheets("Data").Range("A:A")) + 1
+    Worksheets("Data").Range(Used_DataRange).RemoveDuplicates Columns:=Array(1, 2, 3, 4, 5, 6 _
         , 7, 8, 9, 10), Header:=xlYes
        
-    Range("A1").Select
-        
-    Worksheets("Main").Select
     Call Limit_Line
     
-    Application.ScreenUpdating = True
-    Application.DisplayAlerts = True
-    Range("F1").Select
-    
+    With Application
+        .ScreenUpdating = True
+        .DisplayAlerts = True
+    End With
+        
 End Sub
 Sub ETAGT_Filter()
-
-    Worksheets("Main").Select
-
+        
     Value_Sample = Worksheets("Main").ComboBox1.Value
     Value_User = Worksheets("Main").ComboBox2.Value
     Value_Info = Worksheets("Main").ComboBox3.Value
@@ -113,13 +87,56 @@ Sub ETAGT_Filter()
     Value_Template = "*"
     End If
         
-    With Worksheets("Data").Range("A1:J3000")
+    SelectFilter_Range = "A1:J" & WorksheetFunction.CountA(ThisWorkbook.Sheets("Data").Range("A:A")) & ""
+    With Worksheets("Data").Range(SelectFilter_Range)
     .AutoFilter Field:=3, Criteria1:=Value_Sample
     .AutoFilter Field:=4, Criteria1:=Value_User
     .AutoFilter Field:=5, Criteria1:=Value_Info
     .AutoFilter Field:=10, Criteria1:=Value_Template
     End With
-
+    
+    Dim A_Chart As ChartObject
+    
+    Set A_Chart = ActiveSheet.ChartObjects("¹Ïªí 5")
+    
+    P_Counter = 0
+    
+    For i = 1 To WorksheetFunction.CountA(ThisWorkbook.Sheets("Data").Range("A:A"))
+    If Worksheets("Data").Cells(i + 1, 5).Height <> 0 Then
+        P_Counter = P_Counter + 1
+        With A_Chart
+            .Chart.SeriesCollection(1).Points(P_Counter).MarkerBackgroundColor = RGB(255, 255, 0)
+            .Chart.SeriesCollection(1).Points(P_Counter).MarkerForegroundColor = RGB(0, 0, 255)
+        End With
+            If Worksheets("Data").Cells(i + 1, 5) = "SONY" Then
+                With A_Chart
+                    .Chart.SeriesCollection(1).Points(P_Counter).MarkerBackgroundColor = RGB(0, 0, 0)
+                    .Chart.SeriesCollection(1).Points(P_Counter).MarkerForegroundColor = RGB(192, 192, 192)
+                End With
+            End If
+    End If
+    Next i
+            
+    P_Counter = 0
+            
+    Set A_Chart = ActiveSheet.ChartObjects("¹Ïªí 8")
+            
+    For i = 1 To WorksheetFunction.CountA(ThisWorkbook.Sheets("Data").Range("A:A"))
+    If Worksheets("Data").Cells(i + 1, 5).Height <> 0 Then
+        P_Counter = P_Counter + 1
+        With A_Chart
+            .Chart.SeriesCollection(1).Points(P_Counter).MarkerBackgroundColor = RGB(255, 255, 0)
+            .Chart.SeriesCollection(1).Points(P_Counter).MarkerForegroundColor = RGB(0, 0, 255)
+        End With
+            If Worksheets("Data").Cells(i + 1, 5) = "SONY" Then
+                With A_Chart
+                .Chart.SeriesCollection(1).Points(P_Counter).MarkerBackgroundColor = RGB(0, 0, 0)
+                .Chart.SeriesCollection(1).Points(P_Counter).MarkerForegroundColor = RGB(192, 192, 192)
+                End With
+            End If
+    End If
+    Next i
+    
 End Sub
 Sub Limit_Line()
 '
@@ -128,43 +145,35 @@ Sub Limit_Line()
     
     Dim A_Chart As ChartObject
     
-    ActiveSheet.ChartObjects("Figure 5").Activate
-    X_MinValue = WorksheetFunction.Min(Worksheets("Data").Range("A2:A3000"))
-    X_MaxValue = WorksheetFunction.Max(Worksheets("Data").Range("A2:A3000"))
-    ActiveChart.Axes(xlCategory).MinimumScale = X_MinValue
-    ActiveChart.Axes(xlCategory).MaximumScale = X_MaxValue
-    ActiveChart.SeriesCollection(2).XValues = "={" & X_MinValue & "," & X_MaxValue & " }"
-    ActiveChart.SeriesCollection(2).Values = "={7,7}"
-    Set A_Chart = ActiveSheet.ChartObjects("Figure 5")
+    Set A_Chart = ActiveSheet.ChartObjects("¹Ïªí 5")
     With A_Chart
-    .Height = 290
-    .Width = 420
-    .Top = [F8].Top
-    .Left = [F8].Left
+        .Chart.Axes(xlCategory).MinimumScale = WorksheetFunction.Min(Worksheets("Data").Range("A:A"))
+        .Chart.Axes(xlCategory).MaximumScale = WorksheetFunction.Max(Worksheets("Data").Range("A:A"))
+        .Chart.SeriesCollection(2).XValues = "={" & WorksheetFunction.Min(Worksheets("Data").Range("A:A")) & "," & WorksheetFunction.Max(Worksheets("Data").Range("A:A")) & " }"
+        .Chart.SeriesCollection(2).Values = "={7,7}"
+        .Height = 290
+        .Width = 420
+        .Top = [F8].Top
+        .Left = [F8].Left
     End With
     
-    
-    ActiveSheet.ChartObjects("Figure 8").Activate
-    ActiveChart.Axes(xlCategory).MinimumScale = X_MinValue
-    ActiveChart.Axes(xlCategory).MaximumScale = X_MaxValue
-    ActiveChart.SeriesCollection(2).XValues = "={" & X_MinValue & "," & X_MaxValue & " }"
-    ActiveChart.SeriesCollection(2).Values = "={21.994,21.994}"
-    Set A_Chart = ActiveSheet.ChartObjects("Figure 8")
+    Set A_Chart = ActiveSheet.ChartObjects("¹Ïªí 8")
     With A_Chart
-    .Height = 290
-    .Width = 420
-    .Top = [O8].Top
-    .Left = [O8].Left
+        .Chart.Axes(xlCategory).MinimumScale = WorksheetFunction.Min(Worksheets("Data").Range("A:A"))
+        .Chart.Axes(xlCategory).MaximumScale = WorksheetFunction.Max(Worksheets("Data").Range("A:A"))
+        .Chart.SeriesCollection(2).XValues = "={" & WorksheetFunction.Min(Worksheets("Data").Range("A:A")) & "," & WorksheetFunction.Max(Worksheets("Data").Range("A:A")) & " }"
+        .Chart.SeriesCollection(2).Values = "={21.994,21.994}"
+        .Height = 290
+        .Width = 420
+        .Top = [O8].Top
+        .Left = [O8].Left
     End With
 
 End Sub
-
 '-----------------------------------------------------------------------------------------------------------------------------------
 '----part 2 in workbook-------------------------------------------------------------------------------------------------------------
 '-----------------------------------------------------------------------------------------------------------------------------------
 Private Sub Workbook_Open()
-
-'----retrieve unique elements-----------------------------------------------------------------------------------
 
     Application.ScreenUpdating = False
     Application.DisplayAlerts = False
@@ -232,4 +241,7 @@ Private Sub Workbook_Open()
     Application.ScreenUpdating = True
     Application.DisplayAlerts = True
 
+    Call Limit_Line
+    Call ETAGT_Filter
+    
 End Sub
