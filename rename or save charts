@@ -4,7 +4,7 @@
 
     Dim ChrtObj As Object, i As Integer
 
-    With Worksheets("main")
+    With Worksheets("Main")
         For Each ChrtObj In .ChartObjects
             i = i + 1
             ChrtObj.Name = Format(i, """Chart""0")
