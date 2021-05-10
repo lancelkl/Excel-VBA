@@ -1,0 +1,124 @@
+'---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Sub MDCB_BDRDL()
+
+    Cells.Find(What:="[1-", After:=ActiveCell, LookIn:=xlFormulas, LookAt _
+        :=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, MatchCase:= _
+        False, MatchByte:=False, SearchFormat:=False).Activate
+    
+    StartPower = Val(Mid(Cells(ActiveCell.Row, 1), InStr(Cells(ActiveCell.Row, 1), "Power") + 6, InStr(Cells(ActiveCell.Row, 1), "mW") - InStr(Cells(ActiveCell.Row, 1), "Power") - 6))
+    
+    Cells.Find(What:="[2-", After:=ActiveCell, LookIn:=xlFormulas, LookAt _
+        :=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, MatchCase:= _
+        False, MatchByte:=False, SearchFormat:=False).Activate
+            
+    WritePoints = Val(Mid(Cells(ActiveCell.Row - 1, 1), InStr(Cells(ActiveCell.Row - 1, 1), "-") + 1, InStr(Cells(ActiveCell.Row - 1, 1), "]") - InStr(Cells(ActiveCell.Row - 1, 1), "-") - 1))
+    
+    Cells.Find(What:="Measure SER", After:=ActiveCell, LookIn:=xlFormulas, LookAt _
+        :=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, MatchCase:= _
+        False, MatchByte:=False, SearchFormat:=False).Activate
+    
+    LastSummary = ActiveCell.Row
+        
+    For i = 1 To LastSummary - 1
+    
+        If InStr(Cells(i, 1), "Measure Start") <> 0 Then
+            ThisWorkbook.Sheets("Raw").Cells(4 + Counter, 2) = CSng(Mid(Cells(i, 1), InStr(Cells(i, 1), "Power") + 6, InStr(Cells(i, 1), "mW") - InStr(Cells(i, 1), "Power") - 6))
+            Counter = Counter + 1
+        End If
+        
+    Next i
+    
+    Cells.Find(What:="address", After:=ActiveCell, LookIn:=xlFormulas, LookAt _
+        :=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, MatchCase:= _
+        False, MatchByte:=False, SearchFormat:=False).Activate
+        
+    StartRSER = ActiveCell.Row + 1
+    LastRSER = ActiveCell.End(xlDown).Row
+    
+    Call AVE_Retrieve(StartRSER, LastRSER, 2, 3, 4, 3)
+    Call MAX_Retrieve(StartRSER, LastRSER, 2, 3, 5, 4)
+    
+    Cells.Find(What:="address", After:=ActiveCell, LookIn:=xlFormulas, LookAt _
+        :=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, MatchCase:= _
+        False, MatchByte:=False, SearchFormat:=False).Activate
+        
+    StartJitter = ActiveCell.Row + 1
+    LastJitter = ActiveCell.End(xlDown).Row
+    
+    Call AVE_Retrieve(StartJitter, LastJitter, 2, 3, 5, 5)
+    Call AVE_Retrieve(StartJitter, LastJitter, 2, 3, 6, 6)
+    
+    Cells.Find(What:="address", After:=ActiveCell, LookIn:=xlFormulas, LookAt _
+        :=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, MatchCase:= _
+        False, MatchByte:=False, SearchFormat:=False).Activate
+        
+    StartREF = ActiveCell.Row + 1
+    LastREF = ActiveCell.End(xlDown).Row
+    
+    Call AVE_Retrieve(StartREF, LastREF, 2, 3, 4, 7)
+    Call AVE_Retrieve(StartREF, LastREF, 2, 3, 5, 8)
+        
+End Sub
+'---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Sub AVE_Retrieve(StartRow, EndRow, WriteColumn, PowerColumn, DataColumn, OutputColumn)
+
+'---- RSER => WriteColumn = 2, PowerColumn = 3, DataColumn = 4, OutputColumn = 3---------------------------------------------
+'-- Jitter => WriteColumn = 2, PowerColumn = 3, DataColumn = 5, OutputColumn = 5---------------------------------------------
+'---- ASYM => WriteColumn = 2, PowerColumn = 3, DataColumn = 6, OutputColumn = 6---------------------------------------------
+'----- REF => WriteColumn = 2, PowerColumn = 3, DataColumn = 4, OutputColumn = 7---------------------------------------------
+'----- MOD => WriteColumn = 2, PowerColumn = 3, DataColumn = 5, OutputColumn = 8---------------------------------------------
+    
+    For i = StartRow To EndRow
+        If Cells(i, PowerColumn) = ThisWorkbook.Sheets("Raw").Cells(4 + Counter, WriteColumn) Then
+            If Cells(i, DataColumn) > -35 Then
+            ThisWorkbook.Sheets("Raw").Cells(4 + Counter, OutputColumn) = ThisWorkbook.Sheets("Raw").Cells(4 + Counter, OutputColumn) + Cells(i, DataColumn)
+            Divider = Divider + 1
+            End If
+        Else
+            If Divider <> 0 Then
+                ThisWorkbook.Sheets("Raw").Cells(4 + Counter, OutputColumn) = ThisWorkbook.Sheets("Raw").Cells(4 + Counter, OutputColumn) / Divider
+                If OutputColumn = 3 Then
+                ThisWorkbook.Sheets("Raw").Cells(4 + Counter, OutputColumn) = WorksheetFunction.Log10(ThisWorkbook.Sheets("Raw").Cells(4 + Counter, OutputColumn))
+                End If
+                If OutputColumn = 6 Or OutputColumn = 8 Then
+                ThisWorkbook.Sheets("Raw").Cells(4 + Counter, OutputColumn) = ThisWorkbook.Sheets("Raw").Cells(4 + Counter, OutputColumn) / 100
+                End If
+            End If
+            Divider = 0
+            Counter = Counter + 1
+            i = i - 1
+        End If
+            
+        If i = EndRow Then
+            ThisWorkbook.Sheets("Raw").Cells(4 + Counter, OutputColumn) = ThisWorkbook.Sheets("Raw").Cells(4 + Counter, OutputColumn) / Divider
+            If OutputColumn = 3 Then
+            ThisWorkbook.Sheets("Raw").Cells(4 + Counter, OutputColumn) = WorksheetFunction.Log10(ThisWorkbook.Sheets("Raw").Cells(4 + Counter, OutputColumn))
+            End If
+            If OutputColumn = 6 Or OutputColumn = 8 Then
+            ThisWorkbook.Sheets("Raw").Cells(4 + Counter, OutputColumn) = ThisWorkbook.Sheets("Raw").Cells(4 + Counter, OutputColumn) / 100
+            End If
+            Divider = 0
+        End If
+    
+    Next i
+
+End Sub
+'---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Sub MAX_Retrieve(StartRow, EndRow, WriteColumn, PowerColumn, DataColumn, OutputColumn)
+
+'---- BE => WriteColumn = 2, PowerColumn = 3, DataColumn = 5, OutputColumn = 4---------------------------------------------
+    
+    For i = StartRow To EndRow
+        If Cells(i, PowerColumn) = ThisWorkbook.Sheets("Raw").Cells(4 + Counter, WriteColumn) Then
+            If Cells(i, DataColumn) > ThisWorkbook.Sheets("Raw").Cells(4 + Counter, OutputColumn) Then
+            ThisWorkbook.Sheets("Raw").Cells(4 + Counter, OutputColumn) = Cells(i, DataColumn)
+            End If
+        Else
+            Counter = Counter + 1
+            i = i - 1
+        End If
+                
+    Next i
+
+End Sub
+'---------------------------------------------------------------------------------------------------------------------------------------------------------------------
