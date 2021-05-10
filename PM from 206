@@ -230,7 +230,7 @@ Calculation:
     Y_Range(0) = Chr(64 + LayerSelect) & i
     End If
         
-    If Cells(i, LayerSelect) = "Error" And StartFlag = 1 Then
+    If Cells(i, LayerSelect) = "Error" And StartFlag = 1 And StopFlag <> 1 Then
     StopFlag = 1
     Y_Range(1) = ":" & Chr(64 + LayerSelect) & (i - 1)
     End If
@@ -353,7 +353,7 @@ Calculation:
     Y_Range(0) = Chr(64 + LayerSelect) & i
     End If
         
-    If Cells(i, LayerSelect) = "Error" And StartFlag = 1 Then
+    If Cells(i, LayerSelect) = "Error" And StartFlag = 1 And StopFlag <> 1 Then
     StopFlag = 1
     Y_Range(1) = ":" & Chr(64 + LayerSelect) & (i - 1)
     End If
